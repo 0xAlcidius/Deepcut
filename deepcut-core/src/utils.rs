@@ -6,25 +6,25 @@ pub trait FromLeBytes: Sized {
 
 impl FromLeBytes for u8 {
     fn from_le_bytes(buf: &[u8]) -> Result<Self, CoreError> {
-        buf.try_into().map(u8::from_be_bytes).map_err(|_| CoreError::CoreFailedToReadLeU8)
+        buf.try_into().map(u8::from_le_bytes).map_err(|_| CoreError::CoreFailedToReadLeU8)
     }
 }
 
 impl FromLeBytes for u16 {
     fn from_le_bytes(buf: &[u8]) -> Result<Self, CoreError> {
-        buf.try_into().map(u16::from_be_bytes).map_err(|_| CoreError::CoreFailedToReadLeU16)
+        buf.try_into().map(u16::from_le_bytes).map_err(|_| CoreError::CoreFailedToReadLeU16)
     }
 }
 
 impl FromLeBytes for u32 {
     fn from_le_bytes(buf: &[u8]) -> Result<Self, CoreError> {
-        buf.try_into().map(u32::from_be_bytes).map_err(|_| CoreError::CoreFailedToReadLeU32)
+        buf.try_into().map(u32::from_le_bytes).map_err(|_| CoreError::CoreFailedToReadLeU32)
     }
 }
 
 impl FromLeBytes for u64 {
     fn from_le_bytes(buf: &[u8]) -> Result<Self, CoreError> {
-        buf.try_into().map(u64::from_be_bytes).map_err(|_| CoreError::CoreFailedToReadLeU64)
+        buf.try_into().map(u64::from_le_bytes).map_err(|_| CoreError::CoreFailedToReadLeU64)
     }
 }
 
