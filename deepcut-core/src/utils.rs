@@ -1,5 +1,5 @@
 use crate::errors::CoreError;
-use super::errors;
+use super::{errors, utils};
 pub trait FromLeBytes: Sized {
     fn from_le_bytes(buf: &[u8]) -> Result<Self, CoreError>;
 }

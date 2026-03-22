@@ -1,13 +1,15 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
-use deepcut_core::mft::structure::{MftHeader, MFT_RECORD_SIZE};
-use deepcut_core::errors;
-use deepcut_core::errors::{CoreError, ERROR};
+use deepcut_core::mft::structure::{AttributeData, MftAttributeHeader, MftHeader, MFT_ATTRIBUTE_MAX_SIZE, MFT_RECORD_SIZE};
+use deepcut_core::errors::{DeepcutError};
+use deepcut_core::mft::attributes::standard_information;
+use deepcut_core::mft::attributes::standard_information::StandardInformation;
 use deepcut_core::mft::errors::MftError;
 use crate::vprintln;
 
 pub fn parse(path: &str) {
-    let mut file = match read_file(path) {
+    let mut file = match File::open(path) {
         Ok(contents) => contents,
         Err(e) => {
             vprintln!("Could not read file {}: {}", path, e);
@@ -45,9 +47,9 @@ pub fn parse(path: &str) {
         let mft_header = match MftHeader::parse(&record) {
             Ok(header) => header,
             Err(e) => {
-                if e == ERROR::from(MftError::MftHeaderSignatureBad) {
+                if e == DeepcutError::from(MftError::MftHeaderSignatureBad) {
                     corrupted_records += 1;
-                } else if e == ERROR::from(MftError::MftHeaderSignatureInvalid) {
+                } else if e == DeepcutError::from(MftError::MftHeaderSignatureInvalid) {
                     invalid_records += 1;
                 }
                 continue;
@@ -58,9 +60,75 @@ pub fn parse(path: &str) {
         if !fix_usn(&mut record, mft_header.usa_offset as usize) {
             continue;
         }
-    }
 
+        let attributes = parse_record_attributes(&record, mft_header.attr_offset as usize);
+
+        for k in attributes.keys() {
+            let offset = *k;
+            let attribute = match attributes.get(k) {
+                Some(attribute) => attribute,
+                None => continue,
+            };
+
+            match &attribute.data {
+                Some(AttributeData::Resident(resident)) => {
+                    let start = offset + resident.attr_offset as usize;
+                    let end = start + resident.content_len as usize;
+                    if start > MFT_RECORD_SIZE || end > MFT_RECORD_SIZE {
+                        vprintln!("Failed to parse attribute type");
+                        continue;
+                    }
+                    let content = &record[start..end];
+                    match attribute.attr_type {
+                        0x10 => {
+                            let si = match StandardInformation::parse(&content) {
+                                Ok(si) => si,
+                                Err(e) => {
+                                    vprintln!("Failed to parse SI");
+                                    continue;
+                                }
+                            };
+                        },
+                        0x30 => {
+
+                        }
+                        _ => {}
+                    }
+                },
+                Some(AttributeData::NonResident(nonresident)) => {
+                    //todo!("Implement NonResident");
+                },
+                None => {}
+            }
+        }
+    }
     vprintln!("Good record count: {}\nCorrupted records: {}\nInvalid records: {}", good_records, corrupted_records, invalid_records);
+}
+
+fn parse_record_attributes(buf: &[u8], offset: usize) -> HashMap<usize, MftAttributeHeader> {
+    let mut attributes = HashMap::new();
+    let mut pointer = offset;
+    loop {
+        if pointer + MFT_ATTRIBUTE_MAX_SIZE > 0x400 {
+            break;
+        }
+
+        let attr = match MftAttributeHeader::parse(&buf[pointer..pointer + MFT_ATTRIBUTE_MAX_SIZE]) {
+            Ok(header) => header,
+            Err(e) => {
+                vprintln!("Error reading MFT attribute Header: {e}");
+                continue;
+            }
+        };
+
+        if attr.attr_type == 0xFFFFFFFF || attr.attr_len == 0 {
+            break;
+        }
+        let attr_len = attr.attr_len as usize;
+        attributes.insert(pointer, attr);
+        pointer += attr_len;
+    }
+    attributes
 }
 
 fn fix_usn(buf: &mut [u8], usa: usize) -> bool {
@@ -102,7 +170,7 @@ fn fix_usn(buf: &mut [u8], usa: usize) -> bool {
         return false;
     }
 
-    return true;
+    true
 }
 
 fn read_contents(file: &mut File, start: usize, end: usize) -> Result<Vec<u8>, MftError> {
@@ -114,7 +182,7 @@ fn read_contents(file: &mut File, start: usize, end: usize) -> Result<Vec<u8>, M
         }
     }
 
-    let mut buffer = vec![start as u8; end - start];
+    let mut buffer = vec![0u8; end - start];
 
     match file.read_exact(&mut buffer) {
         Ok(_) => { Ok(buffer) },
@@ -123,17 +191,4 @@ fn read_contents(file: &mut File, start: usize, end: usize) -> Result<Vec<u8>, M
             Err(MftError::MftRecordFailedToGetBytesFromRecord)
         }
     }
-}
-
-fn read_file(path: &str) -> Result<File, &'static str> {
-    vprintln!("Parsing {}", path);
-    let file = match File::open(path) {
-        Ok(file) => file,
-        Err(e) => {
-            vprintln!("Could not open file: {}", e);
-            return Err("Could not open file");
-        }
-    };
-
-    Ok(file)
 }

@@ -1,22 +1,24 @@
 use crate::mft::errors::MftError;
 use thiserror::Error;
 
-
-#[derive(PartialEq, Debug)]
-pub enum ERROR {
+#[derive(Error, PartialEq, Debug)]
+pub enum DeepcutError {
+    #[error(transparent)]
     Core(CoreError),
+
+    #[error(transparent)]
     Mft(MftError),
 }
 
-impl From<MftError> for ERROR {
+impl From<MftError> for DeepcutError {
     fn from(e: MftError) -> Self {
-        ERROR::Mft(e)
+        DeepcutError::Mft(e)
     }
 }
 
-impl From<CoreError> for ERROR {
+impl From<CoreError> for DeepcutError {
     fn from(e: CoreError) -> Self {
-        ERROR::Core(e)
+        DeepcutError::Core(e)
     }
 }
 
@@ -33,4 +35,7 @@ pub enum CoreError {
 
     #[error("Failed to read LE U64 bytes")]
     CoreFailedToReadLeU64,
+
+    #[error("Failed to parse UTF16")]
+    CoreFailedToParseUtf16,
 }

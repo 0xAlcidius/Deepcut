@@ -13,4 +13,10 @@ pub enum MftError {
 
     #[error("Failed to get Bytes from MFT Record")]
     MftRecordFailedToGetBytesFromRecord,
+
+    #[error("Failed to read Standard Information, buffer too small")]
+    MftAttributeStandardInformationSmallBuffer,
+
+
+
 }
