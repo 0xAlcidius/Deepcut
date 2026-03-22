@@ -87,55 +87,16 @@ impl MftHeader {
             Err(e) => return Err(ERROR::from(e)),
         };
 
-        let lsn: u64 = match utils::read_bytes(&buf[8..16]) {
-            Ok(lsn) => lsn,
-            Err(e) => return Err(ERROR::from(e)),
-        };
-
-        let seq_num: u16 = match utils::read_bytes(&buf[16..18]) {
-            Ok(seq_num) => seq_num,
-            Err(e) => return Err(ERROR::from(e)),
-        };
-
-        let hard_link_count: u16 = match utils::read_bytes(&buf[18..20]) {
-            Ok(hard_link_count) => hard_link_count,
-            Err(e) => return Err(ERROR::from(e)),
-        };
-
-        let attr_offset: u16 = match utils::read_bytes(&buf[20..22]) {
-            Ok(attr_offset) => attr_offset,
-            Err(e) => return Err(ERROR::from(e)),
-        };
-
-        let flags: u16 = match utils::read_bytes(&buf[22..24]) {
-            Ok(flags) => flags,
-            Err(e) => return Err(ERROR::from(e)),
-        };
-
-        let used_size: u32 = match utils::read_bytes(&buf[24..28]) {
-            Ok(used_size) => used_size,
-            Err(e) => return Err(ERROR::from(e)),
-        };
-
-        let alloc_size: u32 = match utils::read_bytes(&buf[28..32]) {
-            Ok(alloc_size) => alloc_size,
-            Err(e) => return Err(ERROR::from(e)),
-        };
-
-        let base_ref: u64 = match utils::read_bytes(&buf[32..40]) {
-            Ok(base_ref) => base_ref,
-            Err(e) => return Err(ERROR::from(e)),
-        };
-
-        let next_attr_id: u16 = match utils::read_bytes(&buf[40..42]) {
-            Ok(next_attr_id) => next_attr_id,
-            Err(e) => return Err(ERROR::from(e)),
-        };
-
-        let record_number: u32 = match utils::read_bytes(&buf[44..48]) {
-            Ok(record_number) => record_number,
-            Err(e) => return Err(ERROR::from(e)),
-        };
+        let lsn: u64 = utils::read_bytes(&buf[8..16])?;
+        let seq_num: u16 = utils::read_bytes(&buf[16..18])?;
+        let hard_link_count: u16 = utils::read_bytes(&buf[18..20])?;
+        let attr_offset: u16 = utils::read_bytes(&buf[20..22])?;
+        let flags: u16 = utils::read_bytes(&buf[22..24])?;
+        let used_size: u32 = utils::read_bytes(&buf[24..28])?;
+        let alloc_size: u32 = utils::read_bytes(&buf[28..32])?;
+        let base_ref: u64 = utils::read_bytes(&buf[32..40])?;
+        let next_attr_id: u16 = utils::read_bytes(&buf[40..42])?;
+        let record_number: u32 =utils::read_bytes(&buf[44..48])?;
 
         Ok(Self {
             usa_offset,
