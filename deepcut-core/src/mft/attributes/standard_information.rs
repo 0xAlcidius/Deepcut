@@ -1,7 +1,9 @@
 use crate::errors::DeepcutError;
+use crate::mft::attributes::Attribute;
 use crate::mft::errors::MftError;
 use crate::utils;
 
+#[derive(Clone)]
 pub struct StandardInformation {
     pub file_creation: u64,
     pub file_altered: u64,
@@ -19,7 +21,7 @@ pub struct StandardInformation {
 
 impl StandardInformation {
     pub fn parse(buf: &[u8]) -> Result<Self, DeepcutError> {
-        if buf.len() < 0x48 {
+        if buf.len() < 0x42 {
             return Err(DeepcutError::from(MftError::MftAttributeStandardInformationSmallBuffer));
         }
 
@@ -37,5 +39,11 @@ impl StandardInformation {
             quota_charged:          utils::read_bytes(&buf[56..64])?,
             update_sequence_number: utils::read_bytes(&buf[64..72])?,
         })
+    }
+    pub fn get(attribute: Attribute) -> Option<StandardInformation> {
+        match attribute {
+            Attribute::StandardInformation(si) => Some(si),
+            _ => None,
+        }
     }
 }

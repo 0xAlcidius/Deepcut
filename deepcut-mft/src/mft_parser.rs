@@ -3,17 +3,24 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use deepcut_core::mft::structure::{AttributeData, MftAttributeHeader, MftHeader, MFT_ATTRIBUTE_MAX_SIZE, MFT_RECORD_SIZE};
 use deepcut_core::errors::{DeepcutError};
-use deepcut_core::mft::attributes::standard_information;
-use deepcut_core::mft::attributes::standard_information::StandardInformation;
+use deepcut_core::mft::attributes;
+use deepcut_core::mft::attributes::{standard_information::StandardInformation, file_name::FileName, Attribute, standard_information};
 use deepcut_core::mft::errors::MftError;
 use crate::vprintln;
 
-pub fn parse(path: &str) {
+pub struct MftEntry {
+    pub header: MftHeader,
+    pub attributes: HashMap<usize, MftAttributeHeader>,
+    pub standard_information: Option<StandardInformation>,
+    pub file_name: Option<FileName>,
+}
+
+pub fn parse(path: &str) -> Result<HashMap<u64, MftEntry>, MftError> {
     let mut file = match File::open(path) {
         Ok(contents) => contents,
         Err(e) => {
             vprintln!("Could not read file {}: {}", path, e);
-            return;
+            return Err(MftError::MftFileOpenError);
         }
     };
 
@@ -30,11 +37,12 @@ pub fn parse(path: &str) {
         }
     };
 
+    let mut results: HashMap<u64, MftEntry> = HashMap::new();
     loop {
         if file_length != 0 && pointer + MFT_RECORD_SIZE > file_length {
             break;
         }
-
+        let start = pointer;
         let mut record = match read_contents(&mut file, pointer, pointer + MFT_RECORD_SIZE) {
             Ok(contents) => contents,
             Err(e) => {
@@ -61,16 +69,17 @@ pub fn parse(path: &str) {
             continue;
         }
 
-        let attributes = parse_record_attributes(&record, mft_header.attr_offset as usize);
+        let attributes_map = parse_record_attributes(&record, mft_header.attr_offset as usize);
 
-        for k in attributes.keys() {
+        let mut unknown_attributes = Vec::new();
+        for k in attributes_map.keys() {
             let offset = *k;
-            let attribute = match attributes.get(k) {
+            let mft_attribute = match attributes_map.get(k) {
                 Some(attribute) => attribute,
                 None => continue,
             };
 
-            match &attribute.data {
+            let content_result = match &mft_attribute.data {
                 Some(AttributeData::Resident(resident)) => {
                     let start = offset + resident.attr_offset as usize;
                     let end = start + resident.content_len as usize;
@@ -78,31 +87,71 @@ pub fn parse(path: &str) {
                         vprintln!("Failed to parse attribute type");
                         continue;
                     }
-                    let content = &record[start..end];
-                    match attribute.attr_type {
-                        0x10 => {
-                            let si = match StandardInformation::parse(&content) {
-                                Ok(si) => si,
-                                Err(e) => {
-                                    vprintln!("Failed to parse SI");
-                                    continue;
-                                }
-                            };
-                        },
-                        0x30 => {
-
-                        }
-                        _ => {}
-                    }
+                    Ok(&record[start..end])
                 },
-                Some(AttributeData::NonResident(nonresident)) => {
+                Some(AttributeData::NonResident(non_resident)) => {
                     //todo!("Implement NonResident");
+                    continue;
                 },
-                None => {}
+                None => Err("Failed to parse attribute type"),
+            };
+
+            let content = match content_result {
+                Ok(content) => content,
+                Err(e) => {
+                    continue;
+                }
+            };
+
+            let unknown_attribute = match parse_resident_attribute(mft_attribute, content) {
+                Some(a) => a,
+                None => continue,
+            };
+
+            unknown_attributes.push(unknown_attribute);
+        }
+        let mut si: Option<StandardInformation> = None;
+        let mut file_name: Option<FileName> = None;
+
+        for attr in unknown_attributes {
+            si = StandardInformation::get(attr.clone());
+            file_name = FileName::get(attr);
+        }
+
+        results.insert(start as u64, MftEntry {
+            header: mft_header,
+            attributes: attributes_map,
+            standard_information: si,
+            file_name,
+        });
+    }
+
+    vprintln!("Good record count: {}\nCorrupted records: {}\nInvalid records: {}", good_records, corrupted_records, invalid_records);
+    Ok(results)
+}
+
+fn parse_resident_attribute(attribute: &MftAttributeHeader, buf: &[u8]) -> Option<Attribute> {
+    match attribute.attr_type {
+        0x10 => {
+            match StandardInformation::parse(&buf) {
+                Ok(si) => Some(Attribute::StandardInformation(si)),
+                Err(e) => {
+                    vprintln!("Failed to parse SI");
+                    None
+                }
+            }
+        },
+        0x30 => {
+            match FileName::parse(&buf) {
+                Ok(file_name) => Some(Attribute::FileName(file_name)),
+                Err(e) => {
+                    vprintln!("Failed to parse FileName");
+                    None
+                }
             }
         }
+        _ => {None}
     }
-    vprintln!("Good record count: {}\nCorrupted records: {}\nInvalid records: {}", good_records, corrupted_records, invalid_records);
 }
 
 fn parse_record_attributes(buf: &[u8], offset: usize) -> HashMap<usize, MftAttributeHeader> {

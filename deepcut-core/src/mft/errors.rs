@@ -2,6 +2,10 @@ use thiserror::Error;
 
 #[derive(Error, PartialEq, Debug)]
 pub enum MftError {
+
+    #[error("Malformed MFT file")]
+    MftFileOpenError,
+
     #[error("Corrupted MFT Object")]
     MftHeaderSignatureBad,
 
@@ -17,6 +21,7 @@ pub enum MftError {
     #[error("Failed to read Standard Information, buffer too small")]
     MftAttributeStandardInformationSmallBuffer,
 
-
+    #[error("Failed to read resident, wrong type")]
+    MftResidentAttributeParseError,
 
 }

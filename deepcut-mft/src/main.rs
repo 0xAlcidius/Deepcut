@@ -4,7 +4,6 @@
 #![deny(unused_must_use)]
 
 mod mft_parser;
-
 use std::sync::OnceLock;
 use clap::Parser;
 
@@ -33,7 +32,7 @@ fn main() {
         eprintln!("[*]: Verbose was already set");
     }
 
-    mft_parser::parse(&args.path);
+    let results = mft_parser::parse(&args.path);
 }
 
 pub fn is_verbose() -> bool {

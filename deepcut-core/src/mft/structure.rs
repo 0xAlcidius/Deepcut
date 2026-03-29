@@ -1,4 +1,6 @@
 use crate::errors::{DeepcutError};
+use crate::mft::attributes::file_name::FileName;
+use crate::mft::attributes::standard_information::StandardInformation;
 use crate::mft::errors::MftError;
 use crate::utils;
 const MFT_SIGNATURE: u32 = 0x46494C45;
@@ -58,7 +60,6 @@ pub struct MftNonResidentAttribute {
     pub actual_attr: u64,
     pub init_data_size: u64,
 }
-
 
 impl MftHeader {
     pub fn parse(buf: &[u8]) -> Result<Self, DeepcutError> {
