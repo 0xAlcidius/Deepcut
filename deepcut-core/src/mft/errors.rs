@@ -24,4 +24,7 @@ pub enum MftError {
     #[error("Failed to read resident, wrong type")]
     MftResidentAttributeParseError,
 
+    #[error("Failed to read Mft DateTime")]
+    MftInvalidDateTime,
+
 }

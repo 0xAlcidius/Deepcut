@@ -4,8 +4,12 @@
 #![deny(unused_must_use)]
 
 mod mft_parser;
+mod handle;
+mod tree;
+
 use std::sync::OnceLock;
 use clap::Parser;
+use crate::tree::build_tree;
 
 static VERBOSE: OnceLock<bool> = OnceLock::new();
 
@@ -24,6 +28,9 @@ struct Args {
 
     #[arg(short, long)]
     verbose: bool,
+
+    #[arg(long)]
+    export: bool,
 }
 
 fn main() {
@@ -33,6 +40,16 @@ fn main() {
     }
 
     let results = mft_parser::parse(&args.path);
+
+    let safe_results = match results {
+        Ok(results) => results,
+        Err(e) => {
+            vprintln!("Unable to parse MFT file:\n{}", e);
+            return;
+        }
+    };
+
+    build_tree(&safe_results);
 }
 
 pub fn is_verbose() -> bool {

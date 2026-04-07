@@ -7,10 +7,10 @@ use crate::utils;
 #[derive(Clone)]
 pub struct FileName {
     pub ref_to_parent: u64,
-    pub file_creation: u64,
-    pub file_altered: u64,
-    pub file_changed: u64,
-    pub file_read: u64,
+    pub ctime: u64,
+    pub atime: u64,
+    pub mtime: u64,
+    pub rtime: u64,
     pub allocated_size: u64,
     pub real_size: u64,
     pub flags: u32,
@@ -31,10 +31,10 @@ impl FileName {
 
         Ok(Self {
             ref_to_parent: utils::read_bytes(&buf[0..8])?,
-            file_creation: utils::read_bytes(&buf[8..16])?,
-            file_altered: utils::read_bytes(&buf[16..24])?,
-            file_changed: utils::read_bytes(&buf[24..32])?,
-            file_read: utils::read_bytes(&buf[32..40])?,
+            ctime: utils::read_bytes(&buf[8..16])?,
+            atime: utils::read_bytes(&buf[16..24])?,
+            mtime: utils::read_bytes(&buf[24..32])?,
+            rtime: utils::read_bytes(&buf[32..40])?,
             allocated_size: utils::read_bytes(&buf[40..48])?,
             real_size: utils::read_bytes(&buf[48..56])?,
             flags: utils::read_bytes(&buf[56..60])?,

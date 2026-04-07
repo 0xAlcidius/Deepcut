@@ -10,9 +10,8 @@ use crate::vprintln;
 
 pub struct MftEntry {
     pub header: MftHeader,
-    pub attributes: HashMap<usize, MftAttributeHeader>,
     pub standard_information: Option<StandardInformation>,
-    pub file_name: Option<FileName>,
+    pub file_names: Vec<FileName>,
 }
 
 pub fn parse(path: &str) -> Result<HashMap<u64, MftEntry>, MftError> {
@@ -111,18 +110,21 @@ pub fn parse(path: &str) -> Result<HashMap<u64, MftEntry>, MftError> {
             unknown_attributes.push(unknown_attribute);
         }
         let mut si: Option<StandardInformation> = None;
-        let mut file_name: Option<FileName> = None;
+        let mut file_names: Vec<FileName> = Vec::new();
 
         for attr in unknown_attributes {
-            si = StandardInformation::get(attr.clone());
-            file_name = FileName::get(attr);
+            if let Some(parsed_si) = StandardInformation::get(attr.clone()) {
+                si = Some(parsed_si);
+            }
+            if let Some(parsed_fn) = FileName::get(attr) {
+                file_names.push(parsed_fn);
+            }
         }
 
         results.insert(start as u64, MftEntry {
             header: mft_header,
-            attributes: attributes_map,
             standard_information: si,
-            file_name,
+            file_names,
         });
     }
 
